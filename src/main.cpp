@@ -92,6 +92,21 @@ struct Ball : Renderable {
 struct Block : Renderable {
 };
 
+bool check_collision(Renderable a, Renderable b) {
+	return a.position.x + a.size.x >= b.position.x && b.position.x + b.size.x >= a.position.x &&
+		   a.position.y + a.size.y >= b.position.y && b.position.y + b.size.y >= a.position.y;
+}
+
+void handle_collisions(const Ball &ball, std::vector<Block> &blocks) {
+	for (auto &&box : blocks) {
+		if (box.color.a) {
+			if (check_collision(ball, box)) {
+				box.color.a = 0;
+			}
+		}
+	}
+}
+
 int main(int, char**) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << "\n";
@@ -123,8 +138,9 @@ int main(int, char**) {
 	};
 
 	Ball ball;
+	ball.position = { 640, 500 };
 	ball.size = { 16, 16 };
-	ball.velocity = { 4, 8 };
+	ball.velocity = { 4, -8 };
 	ball.color = colors[0];
 
 	std::vector<Block> blocks;
@@ -157,6 +173,7 @@ int main(int, char**) {
 
 		for (auto& render : renderables) {
 			auto obj = render.get();
+			if (!obj.color.a) continue;
 			SDL_SetRenderDrawColor(renderer, obj.color.r, obj.color.g, obj.color.b, obj.color.a);
 			SDL_RenderFillRect(renderer, &obj.rect);
 		}
@@ -167,6 +184,8 @@ int main(int, char**) {
 		ball.position += ball.velocity;
         if (ball.position.x + ball.size.x >= WINDOW_WIDTH || ball.position.x <= 0) ball.velocity.x = -ball.velocity.x;
         if (ball.position.y + ball.size.y >= WINDOW_HEIGHT || ball.position.y <= 0) ball.velocity.y = -ball.velocity.y;
+
+		handle_collisions(ball, blocks);
     }
 
     SDL_DestroyWindow(window);
