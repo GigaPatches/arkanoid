@@ -143,16 +143,6 @@ enum class CollisionDirection : uint8_t {
 	Left
 };
 
-std::ostream &operator<<(std::ostream &os, CollisionDirection dir) {
-	switch (dir) {
-	case CollisionDirection::Up:    return os << "Up";
-	case CollisionDirection::Right: return os << "Right";
-	case CollisionDirection::Down:  return os << "Down";
-	case CollisionDirection::Left:  return os << "Left";
-	}
-	return os << static_cast<uint8_t>(dir);
-}
-
 struct Collision {
 	bool intersects;
 	vec2i depth;
@@ -188,7 +178,6 @@ Collision get_collision(const Entity &a, const Entity &b) {
 		else if (dy > 0) collision.direction = CollisionDirection::Down;
 		else if (dx < 0) collision.direction = CollisionDirection::Left;
 		else if (dx > 0) collision.direction = CollisionDirection::Right;
-		std::cout << "Collision Direction: " << collision.direction << "\n";
 	}
 
 	return collision;
@@ -222,11 +211,15 @@ void handle_collisions(Ball &ball, std::vector<Block> &blocks) {
 }
 
 void handle_collision(Ball &ball, Paddle &paddle) {
+	static bool was_colliding = false;
 	auto collision = get_collision(ball, paddle);
-	if (collision.intersects) {
-		if (collision.direction == CollisionDirection::Up) ball.velocity.y = -ball.velocity.y;
+	if (collision.intersects && !was_colliding) {
+		ball.velocity.y = -ball.velocity.y;
+		if (collision.direction == CollisionDirection::Down) ball.velocity = vec2i(0, 0);
+
 	}
-}
+	was_colliding = collision.intersects;
+}			
 
 int main(int, char**) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -270,12 +263,12 @@ int main(int, char**) {
 
 	std::vector<Block> blocks;
 
-	for (int y = 0; y < 6; y++) {
+	for (int y = 0; y < 12; y++) {
 		for (int x = 0; x < 10; x++) {
 			Block block;
-			block.size = { 128, 32 };
+			block.size = { 128, 16 };
 			block.position = { x*block.size.x, y*block.size.y };
-			block.color = colors[y];
+			block.color = colors[y/2];
 			blocks.push_back(block);
 		}
 	}
@@ -339,7 +332,7 @@ int main(int, char**) {
 
 		ball.position.y += ball.velocity.y;
 		if (ball.position.y <= 0) ball.velocity.y = -ball.velocity.y;
-		if (ball.position.y > paddle.centerY()) ball.velocity = vec2i(0, 0);
+		if (ball.position.y >= WINDOW_HEIGHT - ball.size.y) ball.velocity = vec2i(0, 0);
 		handle_collisions(ball, blocks);
 
 		paddle.position += paddle.velocity;
@@ -347,7 +340,6 @@ int main(int, char**) {
 		if (paddle.position.x < 0) paddle.position.x = 0;
 
 		handle_collision(ball, paddle);
-
 	}
 
 	SDL_DestroyWindow(window);
