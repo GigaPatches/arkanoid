@@ -3,10 +3,10 @@
 #include <vector>
 #include <SDL.h>
 
-const int WINDOW_WIDTH = 1280;
-const int WINDOW_HEIGHT = 720;
-int PADDLE_SPEED = 16;
-int BALL_SPEED = 8;
+const int GAME_WIDTH = 320;
+const int GAME_HEIGHT = 180;
+int PADDLE_SPEED = 4;
+int BALL_SPEED = 2;
 
 template<typename T>
 struct vec2 {
@@ -227,7 +227,7 @@ int main(int, char**) {
 		return 1;
 	}
 
-	auto window = SDL_CreateWindow("Arkanoid", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+	auto window = SDL_CreateWindow("Arkanoid", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, 0);
 	if (window == nullptr) {
 		std::cerr << "Window creation failed! SDL_Error: " << SDL_GetError() << "\n";
 		return 2;
@@ -251,14 +251,14 @@ int main(int, char**) {
 	};
 
 	Ball ball;
-	ball.position = { 640, 500 };
-	ball.size = { 16, 16 };
+	ball.position = { 160, 125 };
+	ball.size = { 4, 4 };
 	ball.velocity = { BALL_SPEED, -BALL_SPEED };
 	ball.color = colors[0];
 
 	Paddle paddle;
-	paddle.position = { 640, 680 };
-	paddle.size = { 128, 16 };
+	paddle.position = { 160, 170 };
+	paddle.size = { 32, 4 };
 	paddle.color = colors[0];
 
 	std::vector<Block> blocks;
@@ -266,7 +266,7 @@ int main(int, char**) {
 	for (int y = 0; y < 12; y++) {
 		for (int x = 0; x < 10; x++) {
 			Block block;
-			block.size = { 128, 16 };
+			block.size = { 32, 4 };
 			block.position = { x*block.size.x, y*block.size.y };
 			block.color = colors[y/2];
 			blocks.push_back(block);
@@ -278,6 +278,7 @@ int main(int, char**) {
 	renderables.emplace_back(ball);
 	renderables.emplace_back(paddle);
 
+	SDL_RenderSetLogicalSize(renderer, GAME_WIDTH, GAME_HEIGHT);
 	SDL_Event e;
 	bool quit = false;
 	while (!quit) {
@@ -327,16 +328,16 @@ int main(int, char**) {
 		SDL_UpdateWindowSurface(window);
 
 		ball.position.x += ball.velocity.x;
-		if (ball.position.x + ball.size.x >= WINDOW_WIDTH || ball.position.x <= 0) ball.velocity.x = -ball.velocity.x;
+		if (ball.position.x + ball.size.x >= GAME_WIDTH || ball.position.x <= 0) ball.velocity.x = -ball.velocity.x;
 		handle_collisions(ball, blocks);
 
 		ball.position.y += ball.velocity.y;
 		if (ball.position.y <= 0) ball.velocity.y = -ball.velocity.y;
-		if (ball.position.y >= WINDOW_HEIGHT - ball.size.y) ball.velocity = vec2i(0, 0);
+		if (ball.position.y >= GAME_HEIGHT - ball.size.y) ball.velocity = vec2i(0, 0);
 		handle_collisions(ball, blocks);
 
 		paddle.position += paddle.velocity;
-		if (paddle.position.x + paddle.size.x > WINDOW_WIDTH) paddle.position.x = WINDOW_WIDTH - paddle.size.x;
+		if (paddle.position.x + paddle.size.x > GAME_WIDTH) paddle.position.x = GAME_WIDTH - paddle.size.x;
 		if (paddle.position.x < 0) paddle.position.x = 0;
 
 		handle_collision(ball, paddle);
