@@ -1,6 +1,11 @@
+#include <cassert>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <array>
+#include <bitset>
 #include <vector>
+#include <cstdint>
 #include <SDL.h>
 
 const int GAME_WIDTH = 320;
@@ -101,6 +106,21 @@ struct colori {
 using vec2f = vec2<float>;
 using vec2i = vec2<int>;
 
+const std::array<std::bitset<60>, 10> FONT{
+	0b111111111111'111100001111'111100001111'111100001111'111111111111, // 0
+	0b000011110000'000011110000'000011110000'000011110000'000011110000, // 1
+	0b111111111111'000000001111'111111111111'111100000000'111111111111, // 2
+	0b111111111111'111100000000'111111111100'111100000000'111111111111, // 3
+	0b111100000000'111100000000'111111111111'111100001111'111100001111, // 4
+	0b111111111111'000000001111'111111111111'111100000000'111111111111, // 5
+	0b111111111111'111100001111'111111111111'000000001111'111111111111, // 6
+	0b111100000000'111100000000'111100000000'111100000000'111111111111, // 7
+	0b111111111111'111100001111'111111111111'111100001111'111111111111, // 8
+	0b111111111111'111100000000'111111111111'111100001111'111111111111, // 9
+};
+const int FONT_WIDTH = 12;
+const int FONT_HEIGHT = 5;
+const colori FONT_COLOR(142, 142, 142, 255);
 
 struct Entity {
 	union {
@@ -214,6 +234,47 @@ void handle_collision(Ball &ball, Paddle &paddle) {
 	was_colliding = collision.intersects;
 }			
 
+SDL_Texture *create_font_texture(SDL_Renderer *renderer) {
+	SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, FONT_WIDTH * FONT.size(), FONT_HEIGHT);
+	std::vector<uint32_t> pixel_data;
+	pixel_data.reserve(FONT_WIDTH * FONT.size() * FONT_HEIGHT);
+	for (int y = 0; y < FONT_HEIGHT; ++y) {
+		for (auto &glyph : FONT) {
+			for (int x = 0; x < FONT_WIDTH; ++x) {
+				pixel_data.push_back(0xFFFFFFFF * glyph[x + y * FONT_WIDTH]);
+			}
+		}
+	}
+
+	int stride = 4 * FONT_WIDTH * FONT.size();
+
+	assert(SDL_UpdateTexture(texture, nullptr, pixel_data.data(), stride) == 0);
+	return texture;
+}
+
+void draw(SDL_Renderer *renderer, SDL_Texture *texture, vec2i pos, int num, int width = 0) {
+	static std::array<uint8_t, 10> digits;
+	SDL_Rect source{ 0,0,FONT_WIDTH,FONT_HEIGHT };
+	SDL_Rect dest{ 0,pos.y,FONT_WIDTH,FONT_HEIGHT };
+
+	int len = 0;
+	while (num != 0) {
+		digits[len++] = num % 10;
+		num /= 10;
+	}
+	
+	while (len < width) {
+		digits[len++] = 0;
+	}
+	
+	SDL_SetTextureColorMod(texture, FONT_COLOR.r, FONT_COLOR.g, FONT_COLOR.b);
+	for (int i = len - 1; i >= 0; --i) {
+		source.x = digits[i] * FONT_WIDTH;
+		SDL_RenderCopy(renderer, texture, &source, &dest);
+		dest.x += FONT_WIDTH + 4;
+	}
+}
+
 int main(int, char**) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << "\n";
@@ -233,6 +294,7 @@ int main(int, char**) {
 		SDL_Quit();
 		return 3;
 	}
+	auto font_texture = create_font_texture(renderer);
 
 	const std::array<colori, 6> colors{
 		colori(200,72,72,255),
@@ -316,6 +378,8 @@ int main(int, char**) {
 			SDL_SetRenderDrawColor(renderer, obj.color.r, obj.color.g, obj.color.b, obj.color.a);
 			SDL_RenderFillRect(renderer, &obj.rect);
 		}
+
+		draw(renderer, font_texture, vec2i(0, 100), 1234567890);
 
 		SDL_RenderPresent(renderer);
 		SDL_UpdateWindowSurface(window);
