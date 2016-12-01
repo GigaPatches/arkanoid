@@ -101,13 +101,6 @@ struct colori {
 using vec2f = vec2<float>;
 using vec2i = vec2<int>;
 
-namespace component {
-	struct Position : vec2i {};
-	struct Velocity : vec2i {};
-	struct Renderable : colori {
-		colori color;
-	};
-}
 
 struct Entity {
 	union {
